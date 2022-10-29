@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using Factories;
 using Helpers;
+using Pools;
 using Settings.Interfaces;
 using UnityEngine;
 using Zenject;
@@ -11,15 +11,15 @@ namespace Server
 {
 	public class Matchmaking : IDisposable
 	{
-		[Inject] private IMatchmakingSettings _matchmakingSettings;
-		[Inject] private RoomFactory          _roomFactory;
+		[Inject] private IRoomSettings   _roomSettings;
+		[Inject] private Pools.RoomsPool _roomsPool;
 
 		private Algorythms.Queue<ulong> _clientsQueue = new();
-		private List<Room>              _roomsList    = new();
-		private Dictionary<ulong, Room> _clientRoom   = new();
+		private List<RoomModel>              _roomsList    = new();
+		private Dictionary<ulong, RoomModel> _clientRoom   = new();
 
 		private IDisposable _roomTimer;
-		private Room        _roomToStart;
+		private RoomModel        _roomModelToStart;
 
 		public int InQueueCount         => _clientsQueue.Count;
 		public int TotalRoomsCount      => _roomsList.Count;
@@ -43,53 +43,54 @@ namespace Server
 				_clientsQueue.Remove(clientId);
 			}
 
-			if (_clientsQueue.Count < _matchmakingSettings.MinPlayerToStart &&
+			if (_clientsQueue.Count < _roomSettings.MinPlayerToStart &&
 			    _roomTimer != null)
 			{
 				_roomTimer?.Dispose();
 				_roomTimer = null;
-				_roomsList.Remove(_roomToStart);
-				_roomFactory.Release(_roomToStart);
-				_roomToStart = null;
+				_roomsList.Remove(_roomModelToStart);
+				_roomsPool.Release(_roomModelToStart);
+				_roomModelToStart = null;
 			}
 		}
 
 		private void CheckForRoomCreation()
 		{
-			if (_clientsQueue.Count >= _matchmakingSettings.MinPlayerToStart &&
+			if (_clientsQueue.Count >= _roomSettings.MinPlayerToStart &&
 			    _roomTimer == null)
 			{
-				var roomToStart = _roomFactory.Get();
+				var roomToStart = _roomsPool.Get();
 				_roomsList.Add(roomToStart);
-				_roomTimer = TimerHelper.StartTimer(_matchmakingSettings.TimeToRoomStart,
+				_roomTimer = TimerHelper.StartTimer(_roomSettings.TimeToRoomStart,
 				                                    () =>
 				                                    {
 					                                    StartRoom(roomToStart);
 					                                    CheckForRoomCreation();
 				                                    });
-				_roomToStart = roomToStart;
+				_roomModelToStart = roomToStart;
 			}
 
-			if (_clientsQueue.Count >= _matchmakingSettings.MaxPlayerToStart &&
+			if (_clientsQueue.Count >= _roomSettings.MaxPlayerToStart &&
 			    _roomTimer != null)
 			{
-				StartRoom(_roomToStart);
+				StartRoom(_roomModelToStart);
 			}
 		}
 
-		private void StartRoom(Room roomToStart)
+		private void StartRoom(RoomModel roomModelToStart)
 		{
 			_roomTimer?.Dispose();
 			_roomTimer   = null;
-			_roomToStart = null;
-			var clientsCount = Mathf.Min(_clientsQueue.Count, _matchmakingSettings.MaxPlayerToStart);
+			_roomModelToStart = null;
+			var clientsCount = Mathf.Min(_clientsQueue.Count, _roomSettings.MaxPlayerToStart);
+			var clients      = new ulong[clientsCount];
 
 			for (var i = 0; i < clientsCount; i++)
 			{
-				roomToStart.Add(_clientsQueue.Dequeue());
+				clients[i] = _clientsQueue.Dequeue();
 			}
 
-			roomToStart.Start();
+			roomModelToStart.Start(clients);
 		}
 
 		public void Dispose()

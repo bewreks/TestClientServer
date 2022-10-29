@@ -1,8 +1,8 @@
 ﻿using Server;
 
-namespace Factories
+namespace Pools
 {
-	public class PlayersFactory : FactoryBase<PlayerModel>
+	public class PlayersPool : BasePool<PlayerModel>
 	{
 		public override PlayerModel Get()
 		{

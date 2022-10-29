@@ -1,10 +1,13 @@
 ﻿using System.Collections.Generic;
+using Zenject;
 
-namespace Factories
+namespace Pools
 {
-	public abstract class FactoryBase<T>
+	public abstract class BasePool<T>
 		where T : class, new()
 	{
+		[Inject] protected DiContainer _container;
+		
 		protected readonly Queue<T> _objects = new();
 
 		public abstract T    Get();
@@ -17,12 +20,14 @@ namespace Factories
 
 		protected T InternalGet()
 		{
-			if (_objects.Count == 0)
+			if (!_objects.TryDequeue(out var obj))
 			{
-				return new T();
+				obj = new T();
 			}
+			
+			_container.Inject(obj);
 
-			return _objects.Dequeue();
+			return obj;
 		}
 	}
 }

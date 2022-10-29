@@ -6,11 +6,11 @@ namespace Settings.Installers
     [CreateAssetMenu(fileName = "MatchmakingInstaller", menuName = "Installers/MatchmakingInstaller")]
     public class MatchmakingSettingsInstaller : ScriptableObjectInstaller<MatchmakingSettingsInstaller>
     {
-        [SerializeField] private MatchmakingSettings matchmakingSettings;
+        [SerializeField] private RoomSettings roomSettings;
         
         public override void InstallBindings()
         {
-            Container.BindInterfacesTo<MatchmakingSettings>().FromInstance(matchmakingSettings).AsSingle();
+            Container.BindInterfacesTo<RoomSettings>().FromInstance(roomSettings).AsSingle();
         }
     }
 }

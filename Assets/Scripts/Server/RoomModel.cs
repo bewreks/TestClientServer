@@ -1,13 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
+using Pools;
+using Settings.Interfaces;
+using Zenject;
 
 namespace Server
 {
-	public class Room
+	public class RoomModel
 	{
+		[Inject] private PlayersPool          _playersPool;
+		[Inject] private IRoomSettings _roomSettings;
+
 		public event Action OnRoomStart;
-		
-		public bool _started;
+
+		private bool _started;
 
 		private Dictionary<ulong, PlayerModel> _players = new();
 
@@ -16,15 +22,7 @@ namespace Server
 			get => _started;
 		}
 
-		public void Add(ulong clientId)
-		{
-			_players.Add(clientId, new PlayerModel
-			                       {
-				                       id = clientId
-			                       });
-		}
-
-		public void Start()
+		public void Start(ulong[] clients)
 		{
 			_started = true;
 			OnRoomStart?.Invoke();
